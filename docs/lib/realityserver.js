@@ -1,16 +1,16 @@
 /******************************************************************************
-* Copyright 2010-2020 migenius pty ltd, Australia. All rights reserved.
+* Copyright 2010-2021 migenius pty ltd, Australia. All rights reserved.
 ******************************************************************************/
 (function (global, factory) {
     typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
     typeof define === 'function' && define.amd ? define(['exports'], factory) :
     (global = global || self, factory(global.RS = global.RS || {}));
-}(this, function (exports) { 'use strict';
+}(this, (function (exports) { 'use strict';
 
     class Command {
         constructor(name, parameters) {
             this.name = name;
-            this.params = Object.assign({},parameters);
+            this.params = Object.assign({}, parameters);
             Object.keys(this.params).forEach(k => this.params[k] === undefined && delete this.params[k]);
         }
     }
@@ -271,6 +271,10 @@
             throw 'No URL creator available.';
         }
         function display_image(data) {
+            if (!data.images || data.images.length === 0) {
+                return;
+            }
+            data = data.images[0];
             if (data.image && data.mime_type) {
                 if (this.lastUrl) {
                     this.url_creator.revokeObjectURL(this.lastUrl);
@@ -324,6 +328,7 @@
     }
 
     var Utils = /*#__PURE__*/Object.freeze({
+        __proto__: null,
         EventEmitter: eventemitter3,
         create_random_string: create_random_string,
         extract_url_details: extract_url_details,
@@ -843,8 +848,8 @@
         }
         invert() {
             let det = this.get_determinant();
-            if (det === 0) {
-                throw new Error('Determinant is 0');
+            if (det === 0 || Number.isNaN(det)) {
+                throw new Error('Determinant is 0 or NaN');
             }
             let mat = this.clone();
             this.xx = mat.determinant_rc(0, 0) / det;
@@ -1549,6 +1554,7 @@
 
 
     var index = /*#__PURE__*/Object.freeze({
+        __proto__: null,
         Color: Color,
         Matrix4x4: Matrix4x4,
         Spectrum: Spectrum,
@@ -1902,8 +1908,7 @@
                     r[key] = value;
                 }
                 return Class_hinting.resolve(r);
-            }
-            case 0x0c: {
+            }        case 0x0c: {
                 let count = this.getUint32();
                 let r = [];
                 for (let i=0;i<count;i++) {
@@ -1911,8 +1916,7 @@
                     r.push(value);
                 }
                 return r;
-            }
-            case 0x0d: return null;
+            }        case 0x0d: return null;
             case 0x0e: return true;
             case 0x0f: return false;
             case 0x10: return {};
@@ -1924,8 +1928,7 @@
                 let byte_count = this.getUint64();
                 binary.data = this.getUint8Array(byte_count);
                 return binary;
-            }
-            case 0x14: {
+            }        case 0x14: {
                 let canvas = {};
                 canvas.num_layers = this.getUint32();
                 if (canvas.num_layers === 0) {
@@ -1944,8 +1947,7 @@
                     canvas.layers.push(this.getUint8Array(canvas_size));
                 }
                 return canvas;
-            }
-            }
+            }        }
             throw 'unsupported typed value type ' + type;
         }
     }
@@ -2234,15 +2236,13 @@
                     self.pushTypedValue(value[key]);
                 });
                 return;
-            }
-            case 0x0c: {
+            }        case 0x0c: {
                 this.pushUint32(value.length);
                 for (let i=0;i<value.length;i++) {
                     this.pushTypedValue(value[i]);
                 }
                 return;
-            }
-            case 0x0d: return;
+            }        case 0x0d: return;
             case 0x0e: return;
             case 0x0f: return;
             case 0x10: return;
@@ -2264,8 +2264,7 @@
                     this.pushArrayBuffer(value.data.buffer);
                 }
                 return;
-            }
-            case 0x14: {
+            }        case 0x14: {
                 if (value.num_layers === undefined ||
                       value.resolution_x === undefined || value.resolution_y === undefined ||
                       value.pixel_format === undefined || !Array.isArray(value.layers)) {
@@ -2299,8 +2298,7 @@
                     this.pushArrayBuffer(value.layers[l].buffer);
                 }
                 return;
-            }
-            }
+            }        }
             throw 'unsupported typed value type ' + type_byte;
         }
     }
@@ -2349,11 +2347,15 @@
     }
 
     class Command_queue {
-        constructor(service, wait_for_render, state_data) {
+        constructor(service, wait_for_render, state_data, options) {
             this.service = service;
             this.wait_for_render = wait_for_render;
             this.state_data = state_data;
+            this.options = options || {};
             this.commands = [];
+        }
+        get length() {
+            return this.commands.length;
         }
         queue(command, want_response=false) {
             this.commands.push({
@@ -2562,6 +2564,57 @@
             });
             return promise.promise;
         }
+        pick(pick, cancel_level = null) {
+            const promise = new Delayed_promise();
+            if (!this.service.validate(promise.reject)) {
+                return promise.promise;
+            }
+            if (this.service.protocol_version < 6) {
+                promise.reject(new RealityServerError(
+                    'Connected RealityServer does not support pick command. ' +
+    				'Update to RealityServer 6.2 to use this feature.'));
+                return promise.promise;
+            }
+            if (!this.streaming) {
+                promise.reject(new RealityServerError('Not streaming.'));
+                return promise.promise;
+            }
+            if (!pick.position) {
+                pick = {
+                    position: arguments[0],
+                    size: arguments[1]
+                };
+                cancel_level = arguments[2];
+            }
+            if (!pick.position) {
+                promise.reject(new RealityServerError('No position provided.'));
+                return promise.promise;
+            }
+            const args = {
+                render_loop_name: this.render_loop_name,
+                position: pick.position
+            };
+            if (pick.size !== null && pick.size !== undefined) {
+                args.size = pick.size;
+            }
+            if (pick.max_levels !== null && pick.max_levels !== undefined) {
+                args.max_levels = pick.max_levels;
+            }
+            if (pick.params !== null && pick.params !== undefined) {
+                args.params = pick.params;
+            }
+            if (cancel_level !== null && cancel_level !== undefined) {
+                args.cancel_level = cancel_level;
+            }
+            this.service.send_ws_command('pick', args, response => {
+                if (response.error) {
+                    promise.reject(new RealityServerError(response.error.message));
+                } else {
+                    promise.resolve(response.result);
+                }
+            });
+            return promise.promise;
+        }
         get_state_data(cancel_level=null, continue_on_error=null) {
             let state_data = this.state_data;
             if ((cancel_level !== null && cancel_level !== this.cancel_level) ||
@@ -2681,9 +2734,15 @@
         static get MESSAGE_ID_PREFER_STRING() {
             return 0x07;
         };
-        static get MAX_SUPPORTED_PROTOCOL() {
-            return 5;
+        static get MESSAGE_ID_PROGRESS() {
+            return 0x08;
         };
+        static get MAX_SUPPORTED_PROTOCOL() {
+            return 9;
+        };
+        get connected_protocol_version() {
+            return this.protocol_version;
+        }
         connect(url, extra_constructor_args=null) {
             return new Promise((resolve, reject) => {
                 if (url !== undefined && url !== null && url.constructor === String) {
@@ -2712,7 +2771,6 @@
                 this.command_id = 0;
                 this.response_handlers = {};
                 this.streams = {};
-                this.protocol_version = 0;
                 this.web_socket.binaryType = 'arraybuffer';
                 let scope = this;
                 this.web_socket.onopen = event => {
@@ -2724,6 +2782,7 @@
                     scope.web_socket.onerror = undefined;
                     scope.web_socket.onmessage = undefined;
                     scope.web_socket = undefined;
+                    scope.protocol_version = undefined;
                     scope.emit('close', event);
                 };
                 this.web_socket.onerror = error => {
@@ -2748,56 +2807,66 @@
                 }
                 function process_received_render(message, now) {
                     const result = message.getSint32();
+                    const n_canvases = scope.protocol_version <= 7 ? 1 : message.getUint32();
                     const render_loop_name = message.getString();
                     const stream = scope.streams[render_loop_name];
                     if (stream === undefined) {
                         return;
                     }
                     if (result >= 0) {
-                        const have_image = message.getUint32();
-                        if (have_image === 0) {
-                            const img_width = message.getUint32();
-                            const img_height = message.getUint32();
-                            const mime_type = message.getString();
-                            const img_size = message.getUint32();
-                            const image = message.getUint8Array(img_size);
-                            const have_stats = message.getUint8();
-                            let stats;
-                            if (have_stats) {
-                                stats = message.getTypedValue();
-                            }
-                            if (stream.last_render_time) {
-                                stats['fps'] = 1 / (now - stream.last_render_time);
-                            }
-                            stream.last_render_time = now;
-                            const data = {
-                                result: result,
-                                width: img_width,
-                                height: img_height,
-                                mime_type: mime_type,
-                                image: image,
-                                statistics: stats,
-                                render_loop_name: stream.render_loop_name
-                            };
-                            const sequence_promises = [];
-                            if (stats.sequence_id > 0) {
-                                while (stream.sequence_promises.length &&
-                                  stream.sequence_promises[0].sequence_id <= stats.sequence_id) {
-                                    const handler = stream.sequence_promises.shift();
-                                    handler.delayed_promise.resolve(data);
-                                    sequence_promises.push(handler.promise);
-                                }
-                            }
-                            if (sequence_promises.length) {
-                                Promise.all(sequence_promises).then(() => {
-                                    emit_image_event(stream, data);
-                                });
-                            } else {
-                                emit_image_event(stream, data);
+                        const images = [];
+                        for (let canvas_index=0; canvas_index<n_canvases; canvas_index++) {
+                            const have_image = message.getUint32();
+                            if (have_image === 0) {
+                                const img_width = message.getUint32();
+                                const img_height = message.getUint32();
+                                const mime_type = message.getString();
+                                const render_type = message.getString();
+                                const img_size = message.getUint32();
+                                const image = message.getUint8Array(img_size);
+                                const data = {
+                                    width: img_width,
+                                    height: img_height,
+                                    mime_type: mime_type,
+                                    render_type: render_type,
+                                    image: image
+                                };
+                                images.push(data);
                             }
                         }
+                        const have_stats = message.getUint8();
+                        let stats;
+                        if (have_stats) {
+                            stats = message.getTypedValue();
+                        }
+                        if (stream.last_render_time) {
+                            stats['fps'] = 1 / (now - stream.last_render_time);
+                        }
+                        stream.last_render_time = now;
+                        const data = {
+                            images: images,
+                            result: result,
+                            render_loop_name: stream.render_loop_name,
+                            statistics: stats
+                        };
+                        const sequence_promises = [];
+                        if (stats.sequence_id > 0) {
+                            while (stream.sequence_promises.length &&
+                            stream.sequence_promises[0].sequence_id <= stats.sequence_id) {
+                                const handler = stream.sequence_promises.shift();
+                                handler.delayed_promise.resolve(data);
+                                sequence_promises.push(handler.promise);
+                            }
+                        }
+                        if (sequence_promises.length) {
+                            Promise.all(sequence_promises).then(() => {
+                                emit_image_event(stream, data);
+                            });
+                        } else {
+                            emit_image_event(stream, data);
+                        }
                     } else {
-                        emit_image_event(stream, {result});
+                        emit_image_event(stream, { result });
                     }
                 }
                 function web_socket_stream(event) {
@@ -2808,7 +2877,10 @@
                         if (message === Service.MESSAGE_ID_IMAGE) {
                             let img_msg = new Web_socket_message_reader(data, 4, scope.web_socket_littleendian);
                             let header_size = img_msg.getUint32();
-                            if (header_size !== 16) {
+                            if (this.protocol_version <= 7 && header_size !== 16) {
+                                return;
+                            }
+                            if (this.protocol_version > 7 && header_size !== 20) {
                                 return;
                             }
                             let image_id = img_msg.getUint32();
@@ -2833,6 +2905,15 @@
                             if (response.id !== undefined) {
                                 process_response(response);
                             }
+                        } else if (message === Service.MESSAGE_ID_PROGRESS) {
+                            let progress_msg = new Web_socket_message_reader(data, 4, scope.web_socket_littleendian);
+                            let id = progress_msg.getString();
+                            let value = progress_msg.getFloat64();
+                            let area = progress_msg.getString();
+                            let message = progress_msg.getString();
+                            scope.emit('progress', {
+                                id, value, area, message
+                            });
                         }
                     } else {
                         const data = JSON.parse(event.data, Class_hinting.reviver);
@@ -2941,7 +3022,9 @@
             });
         }
         close(code=1000, reason='User request') {
-            this.web_socket.close(code, reason);
+            if (this.web_socket) {
+                this.web_socket.close(code, reason);
+            }
         }
         send_ws_command(command, args, handler, scope) {
             let command_id = handler !== undefined ? this.command_id : undefined;
@@ -2991,16 +3074,25 @@
         streaming(render_loop_name) {
             return !!this.streams[render_loop_name];
         }
-        queue_commands({ scope_name=null }={}) {
-            return new Command_queue(this, false, scope_name ? new State_data(scope_name) : this.default_state_data);
+        queue_commands({ scope_name=null, longrunning=false }={}) {
+            return new Command_queue(this,
+                false,
+                scope_name ? new State_data(scope_name) : this.default_state_data,
+                { longrunning });
         }
-        execute_command(command, { want_response=false, scope_name=null }={}) {
-            return new Command_queue(this, false, scope_name ? new State_data(scope_name) : this.default_state_data)
+        execute_command(command, { want_response=false, scope_name=null, longrunning=false }={}) {
+            return new Command_queue(this,
+                false,
+                scope_name ? new State_data(scope_name) : this.default_state_data,
+                { longrunning })
                 .queue(command, want_response)
                 .execute();
         }
-        send_command(command, { want_response=false, scope_name=null }={}) {
-            return new Command_queue(this, false, scope_name ? new State_data(scope_name) : this.default_state_data)
+        send_command(command, { want_response=false, scope_name=null, longrunning=false }={}) {
+            return new Command_queue(this,
+                false,
+                scope_name ? new State_data(scope_name) : this.default_state_data,
+                { longrunning })
                 .queue(command, want_response)
                 .send();
         }
@@ -3037,7 +3129,7 @@
                     commands,
                     render_loop_name: command_queue.state_data.render_loop_name,
                     continue_on_error: command_queue.state_data.continue_on_error,
-                    cancel: command_queue.state_data.cancel,
+                    cancel: command_queue.state_data.cancel
                 };
                 if (wait_for_render) {
                     let stream = this.streams[execute_args.render_loop_name];
@@ -3061,7 +3153,8 @@
                 execute_args = {
                     commands: command_queue.state_data.state_commands ?
                         command_queue.state_data.state_commands.concat(commands) :
-                        commands
+                        commands,
+                    longrunning: command_queue.options && command_queue.options.longrunning
                 };
             }
             const scope = this;
@@ -3182,24 +3275,24 @@
         }
     }
 
-    exports.Utils = Utils;
-    exports.Math = index;
+    exports.ALMOST_ZERO = ALMOST_ZERO;
+    exports.Color = Color;
     exports.Command = Command;
     exports.Command_error = Command_error;
     exports.Error = RealityServerError;
-    exports.Service = Service;
-    exports.Stream = Stream;
-    exports.Color = Color;
+    exports.Math = index;
     exports.Matrix4x4 = Matrix4x4;
+    exports.Service = Service;
     exports.Spectrum = Spectrum;
+    exports.Stream = Stream;
+    exports.Utils = Utils;
     exports.Vector2 = Vector2;
     exports.Vector3 = Vector3;
     exports.Vector4 = Vector4;
-    exports.ALMOST_ZERO = ALMOST_ZERO;
-    exports.radians = radians;
     exports.degrees = degrees;
+    exports.radians = radians;
 
     Object.defineProperty(exports, '__esModule', { value: true });
 
-}));
+})));
 //# sourceMappingURL=realityserver.js.map

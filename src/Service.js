@@ -182,15 +182,36 @@ class Service extends EventEmitter {
     static get MESSAGE_ID_PREFER_STRING() {
         return 0x07;
     };
+    static get MESSAGE_ID_PROGRESS() {
+        return 0x08;
+    };
 
     /**
      * Max supported protocol version
      * @access private
     */
     static get MAX_SUPPORTED_PROTOCOL() {
-        return 5;
+        return 9;
     };
 
+    /**
+     * The protocol version negotiated with the connected RealityServer. This value is
+     * undefined if not currently connected.
+     * @return {Number}
+     */
+    get connected_protocol_version() {
+        return this.protocol_version;
+    }
+
+    /**
+     * Data emitted when progress has been made during command execution.
+     * @typedef {Object} RS.Service~Progress_data
+     * @property {String} id - The id registered when the command was executed.
+     * @property {Number} value - 0 to 100 value indicating progress.
+     * @property {String} area - The area of execution the command is currently in.
+     * @property {String} message - A message associated with the progress event.
+     */
+    
     /**
      * Connects to RealityServer and performs the initial handshake to ensure
      * streaming functionality is available. Returns a `Promise` that resolves when connected. The promise
@@ -237,7 +258,6 @@ class Service extends EventEmitter {
             this.command_id = 0;
             this.response_handlers = {};
             this.streams = {};
-            this.protocol_version = 0;
             this.web_socket.binaryType = 'arraybuffer';
 
             let scope = this;
@@ -260,6 +280,7 @@ class Service extends EventEmitter {
                 scope.web_socket.onerror = undefined;
                 scope.web_socket.onmessage = undefined;
                 scope.web_socket = undefined;
+                scope.protocol_version = undefined;
                 /**
                  * Close event.
                  *
@@ -307,7 +328,7 @@ class Service extends EventEmitter {
                      * and on each individual {@link RS.Stream}
                      *
                      * @event RS.Stream#image
-                     * @param {RS.Stream~Rendered_image} image The rendered image
+                     * @param {RS.Stream~Rendered_result} image The rendered result
                      */
                     scope.emit('image', data);
                     stream.emit('image', data);
@@ -315,6 +336,7 @@ class Service extends EventEmitter {
             }
             function process_received_render(message, now) {
                 const result = message.getSint32();
+                const n_canvases = scope.protocol_version <= 7 ? 1 : message.getUint32();
                 // render loop name
                 const render_loop_name = message.getString();
                 const stream = scope.streams[render_loop_name];
@@ -323,60 +345,73 @@ class Service extends EventEmitter {
                     return;
                 }
                 if (result >= 0) {
-                    // should have an image
-                    const have_image = message.getUint32();
-                    if (have_image === 0) {
-                        // got an image
-                        const img_width = message.getUint32();
-                        const img_height = message.getUint32();
-                        const mime_type = message.getString();
-                        const img_size = message.getUint32();
-                        // and finally the image itself
-                        const image = message.getUint8Array(img_size);
+                    const images = [];
+                    for (let canvas_index=0; canvas_index<n_canvases; canvas_index++) {
+                        // should have an image
+                        const have_image = message.getUint32();
+                        if (have_image === 0) {
+                            // got an image
+                            const img_width = message.getUint32();
+                            const img_height = message.getUint32();
+                            const mime_type = message.getString();
+                            const render_type = message.getString();
+                            const img_size = message.getUint32();
+                            // and finally the image itself
+                            const image = message.getUint8Array(img_size);
 
-                        // then any statistical data
-                        const have_stats = message.getUint8();
-                        let stats;
-                        if (have_stats) {
-                            stats = message.getTypedValue();
-                        }
-                        if (stream.last_render_time) {
-                            stats['fps'] = 1 / (now - stream.last_render_time);
-                        }
-                        stream.last_render_time = now;
-                        const data = {
-                            result: result,
-                            width: img_width,
-                            height: img_height,
-                            mime_type: mime_type,
-                            image: image,
-                            statistics: stats,
-                            render_loop_name: stream.render_loop_name
-                        };
-                        // Process any command promises that are resolved by this render.
-                        const sequence_promises = [];
-                        if (stats.sequence_id > 0) {
-                            while (stream.sequence_promises.length &&
-                              stream.sequence_promises[0].sequence_id <= stats.sequence_id) {
-                                const handler = stream.sequence_promises.shift();
-                                handler.delayed_promise.resolve(data);
-                                sequence_promises.push(handler.promise);
-                            }
-                        }
-                        // Any command promises resolved above will not have their resolve
-                        // functions called until the next tick. So if there are any we
-                        // must wait until they are complete before emitting the image event
-                        // giving them a chance to unpause the stream.
-                        if (sequence_promises.length) {
-                            Promise.all(sequence_promises).then(() => {
-                                emit_image_event(stream, data);
-                            });
-                        } else {
-                            emit_image_event(stream, data);
+                            const data = {
+                                width: img_width,
+                                height: img_height,
+                                mime_type: mime_type,
+                                render_type: render_type,
+                                image: image
+                            };
+
+                            images.push(data);
                         }
                     }
+
+                    // then any statistical data
+                    const have_stats = message.getUint8();
+                    let stats;
+                    if (have_stats) {
+                        stats = message.getTypedValue();
+                    }
+                    if (stream.last_render_time) {
+                        stats['fps'] = 1 / (now - stream.last_render_time);
+                    }
+                    stream.last_render_time = now;
+
+                    const data = {
+                        images: images,
+                        result: result,
+                        render_loop_name: stream.render_loop_name,
+                        statistics: stats
+                    };
+
+                    // Process any command promises that are resolved by this render.
+                    const sequence_promises = [];
+                    if (stats.sequence_id > 0) {
+                        while (stream.sequence_promises.length &&
+                        stream.sequence_promises[0].sequence_id <= stats.sequence_id) {
+                            const handler = stream.sequence_promises.shift();
+                            handler.delayed_promise.resolve(data);
+                            sequence_promises.push(handler.promise);
+                        }
+                    }
+                    // Any command promises resolved above will not have their resolve
+                    // functions called until the next tick. So if there are any we
+                    // must wait until they are complete before emitting the image event
+                    // giving them a chance to unpause the stream.
+                    if (sequence_promises.length) {
+                        Promise.all(sequence_promises).then(() => {
+                            emit_image_event(stream, data);
+                        });
+                    } else {
+                        emit_image_event(stream, data);
+                    }
                 } else {
-                    emit_image_event(stream, {result});
+                    emit_image_event(stream, { result });
                 }
 
             }
@@ -390,7 +425,11 @@ class Service extends EventEmitter {
                         // yup, an image
                         let img_msg = new Web_socket_message_reader(data, 4, scope.web_socket_littleendian);
                         let header_size = img_msg.getUint32();
-                        if (header_size !== 16) {
+                        if (this.protocol_version <= 7 && header_size !== 16) {
+                            // not good
+                            return;
+                        }
+                        if (this.protocol_version > 7 && header_size !== 20) {
                             // not good
                             return;
                         }
@@ -421,6 +460,25 @@ class Service extends EventEmitter {
                         if (response.id !== undefined) {
                             process_response(response);
                         }
+                    } else if (message === Service.MESSAGE_ID_PROGRESS) {
+                        let progress_msg = new Web_socket_message_reader(data, 4, scope.web_socket_littleendian);
+                        let id = progress_msg.getString();
+                        let value = progress_msg.getFloat64();
+                        let area = progress_msg.getString();
+                        let message = progress_msg.getString();
+
+                        /**
+                         * Progress event.
+                         *
+                         * Fired whenever a command has completed some measure of progress.
+                         * This event will be fired on {@link RS.Service} for all streams.
+                         *
+                         * @event RS.Service#progress
+                         * @param {RS.Service~Progress_data} progress The command progress data
+                         */
+                        scope.emit('progress', {
+                            id, value, area, message
+                        });
                     }
                 } else {
                     const data = JSON.parse(event.data, Class_hinting.reviver);
@@ -444,7 +502,7 @@ class Service extends EventEmitter {
                         reject(new RS_error('Unexpected handshake header, ' +
                                             'does not appear to be a RealityServer connection.'));
                     } else {
-                        // check that the protcol version is acceptable
+                        // check that the protocol version is acceptable
                         const protocol_version = data.getUint32(8, scope.web_socket_littleendian);
                         if (protocol_version < 2 || protocol_version > Service.MAX_SUPPORTED_PROTOCOL) {
                             // unsupported protocol, can't go on
@@ -659,10 +717,18 @@ class Service extends EventEmitter {
      * @param {Object=} options
      * @param {String=} options.scope_name - If provided then commands are executed in this
      * scope. If not the default service scope is used.
+     * @param {Boolean=} options.longrunning - A hint as to whether the commands are expected to
+     * be long running or not. Long running commands are executed asynchronously on the server to
+     * ensure they do not tie up the web socket connection. Note this hint is only supported in
+     * protocol version 7 and above (RealityServer 6.2 3938.141 or later). See "Long running commands"
+     * in {@tutorial 02-concepts} for more details.
      * @return {RS.Command_queue} The command queue to add commands to and then execute.
      */
-    queue_commands({ scope_name=null }={}) {
-        return new Command_queue(this, false, scope_name ? new State_data(scope_name) : this.default_state_data);
+    queue_commands({ scope_name=null, longrunning=false }={}) {
+        return new Command_queue(this,
+            false,
+            scope_name ? new State_data(scope_name) : this.default_state_data,
+            { longrunning });
     }
 
     /**
@@ -678,12 +744,20 @@ class Service extends EventEmitter {
      * command. If `false` then the promise resolves immediately to `undefined`.
      * @param {String=} options.scope_name - If provided then commands are executed in this
      * scope. If not the default service scope is used.
+     * @param {Boolean=} options.longrunning - A hint as to whether the commands are expected to
+     * be long running or not. Long running commands are executed asynchronously on the server to
+     * ensure they do not tie up the web socket connection. Note this hint is only supported in
+     * protocol version 7 and above (RealityServer 6.2 3938.141 or later). See "Long running commands"
+     * in {@tutorial 02-concepts} for more details.
      * @return {Promise} A `Promise` that resolves to an iterable.
      * @fires RS.Service#command_requests
      * @fires RS.Service#command_results
      */
-    execute_command(command, { want_response=false, scope_name=null }={}) {
-        return new Command_queue(this, false, scope_name ? new State_data(scope_name) : this.default_state_data)
+    execute_command(command, { want_response=false, scope_name=null, longrunning=false }={}) {
+        return new Command_queue(this,
+            false,
+            scope_name ? new State_data(scope_name) : this.default_state_data,
+            { longrunning })
             .queue(command, want_response)
             .execute();
     }
@@ -700,6 +774,11 @@ class Service extends EventEmitter {
      * command. If `false` then the promise resolves immediately to undefined.
      * @param {String=} options.scope_name - If provided then commands are executed in this
      * scope. If not the default service scope is used.
+     * @param {Boolean=} options.longrunning - A hint as to whether the commands are expected to
+     * be long running or not. Long running commands are executed asynchronously on the server to
+     * ensure they do not tie up the web socket connection. Note this hint is only supported in
+     * protocol version 7 and above (RealityServer 6.2 3938.141 or later). See "Long running commands"
+     * in {@tutorial 02-concepts} for more details.
      * @return {Promise[]} An `Array` of `Promises`. These promises will not reject.
      * @throws {RS.Error} This call will throw an error in the following circumstances:
      * - there is no WebSocket connection.
@@ -707,8 +786,11 @@ class Service extends EventEmitter {
      * @fires RS.Service#command_requests
      * @fires RS.Service#command_results
      */
-    send_command(command, { want_response=false, scope_name=null }={}) {
-        return new Command_queue(this, false, scope_name ? new State_data(scope_name) : this.default_state_data)
+    send_command(command, { want_response=false, scope_name=null, longrunning=false }={}) {
+        return new Command_queue(this,
+            false,
+            scope_name ? new State_data(scope_name) : this.default_state_data,
+            { longrunning })
             .queue(command, want_response)
             .send();
     }
@@ -757,7 +839,7 @@ class Service extends EventEmitter {
                 commands,
                 render_loop_name: command_queue.state_data.render_loop_name,
                 continue_on_error: command_queue.state_data.continue_on_error,
-                cancel: command_queue.state_data.cancel,
+                cancel: command_queue.state_data.cancel
             };
             if (wait_for_render) {
                 let stream = this.streams[execute_args.render_loop_name];
@@ -781,7 +863,8 @@ class Service extends EventEmitter {
             execute_args = {
                 commands: command_queue.state_data.state_commands ?
                     command_queue.state_data.state_commands.concat(commands) :
-                    commands
+                    commands,
+                longrunning: command_queue.options && command_queue.options.longrunning
             };
         }
         const scope = this;

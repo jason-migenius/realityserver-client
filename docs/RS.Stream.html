@@ -445,6 +445,10 @@
             
             <ul class="members itemMembers">
             
+            <span class="subtitle">Members</span>
+            
+                <li class="parent " data-name="RS.Command_queue#length"><a href="RS.Command_queue.html#length">length</a></li>
+            
             </ul>
             
             <ul class="typedefs itemMembers">
@@ -985,6 +989,8 @@
             
                 <li class="parent " data-name="RS.Service.websocket"><a href="RS.Service.html#.websocket">websocket</a></li>
             
+                <li class="parent " data-name="RS.Service#connected_protocol_version"><a href="RS.Service.html#connected_protocol_version">connected_protocol_version</a></li>
+            
                 <li class="parent " data-name="RS.Service#connector_name"><a href="RS.Service.html#connector_name">connector_name</a></li>
             
                 <li class="parent " data-name="RS.Service#debug_commands"><a href="RS.Service.html#debug_commands">debug_commands</a></li>
@@ -996,6 +1002,10 @@
             </ul>
             
             <ul class="typedefs itemMembers">
+            
+            <span class="subtitle">Typedefs</span>
+            
+                <li class="parent" data-name="RS.Service~Progress_data"><a href="RS.Service.html#~Progress_data">Progress_data</a></li>
             
             </ul>
             
@@ -1041,6 +1051,8 @@
             
                 <li class="parent" data-name="RS.Service#event:open"><a href="RS.Service.html#event:open">open</a></li>
             
+                <li class="parent" data-name="RS.Service#event:progress"><a href="RS.Service.html#event:progress">progress</a></li>
+            
             </ul>
             
         </li>
@@ -1073,6 +1085,8 @@
             
                 <li class="parent" data-name="RS.Stream~Rendered_image"><a href="RS.Stream.html#~Rendered_image">Rendered_image</a></li>
             
+                <li class="parent" data-name="RS.Stream~Rendered_result"><a href="RS.Stream.html#~Rendered_result">Rendered_result</a></li>
+            
             </ul>
             
             <ul class="typedefs itemMembers">
@@ -1086,6 +1100,10 @@
                 <li class="parent  " data-name="RS.Stream#execute_command"><a href="RS.Stream.html#execute_command">execute_command</a></li>
             
                 <li class="parent  " data-name="RS.Stream#pause"><a href="RS.Stream.html#pause">pause</a></li>
+            
+                <li class="parent  status-deprecated" data-name="RS.Stream#pick"><a href="RS.Stream.html#pick">pick</a></li>
+            
+                <li class="parent  " data-name="RS.Stream#pick"><a href="RS.Stream.html#pick">pick</a></li>
             
                 <li class="parent  " data-name="RS.Stream#queue_commands"><a href="RS.Stream.html#queue_commands">queue_commands</a></li>
             
@@ -1154,7 +1172,7 @@
     
 <header>
     <div class="header content-size">
-        <h2><span class="ancestors"><a href="RS.html">RS</a>~</span>Stream
+        <h2><span class="ancestors"><a href="RS.html">RS</a>.</span>Stream
         </h2>
         
             <div class="class-description"><p>Represents an image stream from a render loop.</p>
@@ -1494,7 +1512,7 @@ The iterable will contain up to 2 results</p>
 <ul>
 <li>if <code>want_response</code> is <code>true</code> then the first iterable will be the result of the command or a
 <a href="RS.Command_error.html">RS.Command_error</a>.</li>
-<li>if <code>wait_for_render</code> is <code>true</code> then the last iterable will be a <a href="RS.Stream.html#~Rendered_image">RS.Stream~Rendered_image</a> containing
+<li>if <code>wait_for_render</code> is <code>true</code> then the last iterable will be a <a href="RS.Stream.html#~Rendered_result">RS.Stream~Rendered_result</a> containing
 the first rendered image that contains the result of the command.</li>
 </ul>
 <p>The promise will reject in the following circumstances:</p>
@@ -1927,6 +1945,575 @@ the server, the callback is just not called. Pause calls are counted so you need
             </td>
             <td class="description last">The pause count, IE: the number of times resume will need to be called to
 start emitting events again.</td>
+        </tr>
+    
+    </tbody>
+</table>
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer">
+        <h4 class="name" id="pick">
+            <a class="share-icon" href="#pick"><span class="glyphicon glyphicon-link"></span></a>
+            <span class="status-deprecated">
+                pick
+            </span>
+            <span class="signature">(position, <span class="optional">size</span>, <span class="optional">cancel_level</span>)</span><span class="type-signature">Promise</span>
+            
+                <span class="access-signature deprecated">Deprecated
+                    : <span class="deprecated-info">This variant of pick is deprecated in favour of the two argument version below.</span>
+                    
+                </span>
+            
+            
+            
+            
+        </h4>
+    
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>Executes a pick operation on the render loop. The returned promise resolves with an array of
+pick results. If no objects were under the point then the array will be empty.</p>
+<p>Note that stream picking is only supported in RealityServer 6.2 and above.</p>
+<p>The returned promise will reject in the following circumstances:</p>
+<ul>
+<li>there is no WebSocket connection.</li>
+<li>the WebSocket connection has not started (IE: <a href="RS.Service.html#connect">RS.Service#connect</a> has not yet resolved).</li>
+<li>this stream is not yet streaming</li>
+<li>no position is provided.</li>
+<li>arguments are the wrong type or \p position has a negative coordinate</li>
+<li>the render loop is no longer available.</li>
+<li>the connected RealityServer does not support picking on a stream.</li>
+</ul>
+    </div>
+    
+
+    
+    
+    
+    
+    
+        
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>position</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">Vector2</span>
+
+
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                    
+                    
+                        
+                    
+                
+                <p>The screen space position of the pick.</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>size</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">Vector2</span>
+
+
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                    
+                        <span class="optional">optional</span>
+                    
+                    
+                        
+                    
+                
+                <p>The screen space rectangular size of the pick. Defaults to a 1x1 pixel area.</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>cancel_level</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">Number</span>
+
+
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                    
+                        <span class="optional">optional</span>
+                    
+                    
+                        
+                    
+                
+                <p>The cancel level override. Defaults to 1.</p></td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    <h5>Returns:</h5>
+    
+
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Type</th>
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+    <tbody>
+    
+        <tr>
+            
+            <td class="type">
+            
+                        Promise
+                        
+                    
+            </td>
+            <td class="description last">A <code>Promise</code> that resolves to an array of pick results. Each element
+in the pick result array will be an object containing the following properties:
+world_point (Vector3), picked_object_name (String), path (String[]).</td>
+        </tr>
+    
+    </tbody>
+</table>
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer">
+        <h4 class="name" id="pick">
+            <a class="share-icon" href="#pick"><span class="glyphicon glyphicon-link"></span></a>
+            <span class="">
+                pick
+            </span>
+            <span class="signature">(pick, <span class="optional">cancel_level</span>)</span><span class="type-signature">Promise</span>
+            
+            
+            
+            
+        </h4>
+    
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>Executes a pick operation on the render loop. The returned promise resolves with an array of
+pick results. If no objects were under the point then the array will be empty.</p>
+<p>Note that stream picking is only supported in RealityServer 6.2 and above.</p>
+<p>The returned promise will reject in the following circumstances:</p>
+<ul>
+<li>there is no WebSocket connection.</li>
+<li>the WebSocket connection has not started (IE: <a href="RS.Service.html#connect">RS.Service#connect</a> has not yet resolved).</li>
+<li>this stream is not yet streaming</li>
+<li>no position is provided.</li>
+<li>arguments are the wrong type or \p position has a negative coordinate</li>
+<li>the render loop is no longer available.</li>
+<li>the connected RealityServer does not support picking on a stream.</li>
+</ul>
+    </div>
+    
+
+    
+    
+    
+    
+    
+        
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>pick</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                    
+                    
+                        
+                    
+                
+                <p>Object defining what to pick</p>
+                
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>position</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">Vector2</span>
+
+
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                    
+                    
+                        
+                    
+                
+                <p>The screen space position of the pick.</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>size</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">Vector2</span>
+
+
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                    
+                        <span class="optional">optional</span>
+                    
+                    
+                        
+                    
+                
+                <p>The screen space rectangular size of the pick. Defaults to a 1x1 pixel area.</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>max_levels</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">Number</span>
+
+
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                    
+                        <span class="optional">optional</span>
+                    
+                    
+                        
+                    
+                
+                <p>Controls the number of rays that may be cast, per ray, during the
+picking operation. A level of 1 will only trace primary rays. Any other value
+will continue tracing rays through the scene until nothing was hit or the maximum
+depth is exhausted, with a value of 0 indicating unconstrained depth. This parameter
+has no effect when using versions of RealityServer prior to 6.3.</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>params</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                    
+                        <span class="optional">optional</span>
+                    
+                    
+                        
+                    
+                
+                <p>Render loop handler defined parameters used to control the pick operation.</p></td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+            </td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>cancel_level</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">Number</span>
+
+
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                    
+                        <span class="optional">optional</span>
+                    
+                    
+                        
+                    
+                
+                <p>The cancel level override. Defaults to 1.</p></td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    <h5>Returns:</h5>
+    
+
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Type</th>
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+    <tbody>
+    
+        <tr>
+            
+            <td class="type">
+            
+                        Promise
+                        
+                    
+            </td>
+            <td class="description last">A <code>Promise</code> that resolves to an array of pick results. Each element
+in the pick result array will be an object containing the following properties:
+world_point (Vector3), picked_object_name (String), path (String[]).</td>
         </tr>
     
     </tbody>
@@ -2589,7 +3176,7 @@ command. If <code>false</code> then the promise resolves immediately to undefine
                     
                 
                 <p>If <code>true</code>, then the <code>render</code> promise resolves to a
-<a href="RS.Stream.html#~Rendered_image">RS.Stream~Rendered_image</a> just before the RS.Service#event:image event that contains the
+<a href="RS.Stream.html#~Rendered_result">RS.Stream~Rendered_result</a> just before the RS.Service#event:image event that contains the
 result of this command is emitted.</p></td>
         </tr>
 	
@@ -2884,6 +3471,37 @@ The returned promise will reject in the following circumstances:</p>
 	
         <tr>
             
+                <td class="name"><code>encoder_name</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">String</span>
+
+
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                    
+                        <span class="optional">optional</span>
+                    
+                    
+                        
+                    
+                
+                <p>the name of the stream encoder to modify or the default encoder
+if omitted.</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
                 <td class="name"><code>image_format</code></td>
             
             
@@ -2914,6 +3532,36 @@ The returned promise will reject in the following circumstances:</p>
 	
         <tr>
             
+                <td class="name"><code>pixel_type</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">String</span>
+
+
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                    
+                        <span class="optional">optional</span>
+                    
+                    
+                        
+                    
+                
+                <p>the streamed image pixel type.</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
                 <td class="name"><code>quality</code></td>
             
             
@@ -2938,6 +3586,102 @@ The returned promise will reject in the following circumstances:</p>
                     
                 
                 <p>the streamed image quality.</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>pause_state</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">Boolean</span>
+
+
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                    
+                        <span class="optional">optional</span>
+                    
+                    
+                        
+                    
+                
+                <p>whether render loop pause state events <a href="RS.Service.html#event:progress">RS.Service#event:progress</a>
+should be generated whenever the render loop is paused or resumed. The event id will be in the format
+<code>[render_loop_name]::pause</code> and the area will be <code>pause_state</code>. The progress field will be one of: <code>0</code> (running),
+<code>1</code> (entering paused state), <code>2</code> (paused). The message field will be empty. This option is off by default.
+Supported in RealityServer 6.4 3508.349 or later.</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>render_progress</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">Boolean</span>
+
+
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                    
+                        <span class="optional">optional</span>
+                    
+                    
+                        
+                    
+                
+                <p>whether rendering progress events <a href="RS.Service.html#event:progress">RS.Service#event:progress</a>
+should be generated whenever an image is being rendered.  The event id will be in the format <code>[render_loop_name]::render</code>.
+This option is off by default. Supported in RealityServer 6.4 3508.349 or later.</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>encoders</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                    
+                        <span class="optional">optional</span>
+                    
+                    
+                        
+                    
+                
+                <p>named encoder parameters.</p></td>
         </tr>
 	
 	
@@ -3055,6 +3799,10 @@ data is provided.</li>
 </ul>
 <p>Once the stream has started <a href="RS.Stream.html#event:image">RS.Stream#event:image</a> events will be emitted on both the stream
 object and the original <a href="RS.Service.html">RS.Service</a> object every time a rendered image is received from the server.</p>
+<p>Starting from version 2.0.1 the special <code>image_format</code> value of <code>NONE</code> can be supplied. This will
+establish a 'command and control' stream that will not send images to the client but can still
+be used to edit the RealityServer scene. Note that it is not possible to start or stop streaming
+images once a stream has started.</p>
     </div>
     
 
@@ -3186,6 +3934,36 @@ object to specify additional streaming data.</p>
 	
         <tr>
             
+                <td class="name"><code>pixel_type</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">String</span>
+
+
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                    
+                        <span class="optional">optional</span>
+                    
+                    
+                        
+                    
+                
+                <p>the streamed image pixel type.</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
                 <td class="name"><code>quality</code></td>
             
             
@@ -3210,6 +3988,105 @@ object to specify additional streaming data.</p>
                     
                 
                 <p>the streamed image quality.</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>pause_state</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">Boolean</span>
+
+
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                    
+                        <span class="optional">optional</span>
+                    
+                    
+                        
+                    
+                
+                <p>whether render loop pause state events <a href="RS.Service.html#event:progress">RS.Service#event:progress</a>
+should be generated whenever the render loop is paused or resumed. The event id will be in the format
+<code>[render_loop_name]::pause</code> and the area will be <code>pause_state</code>. The progress field will be one of: <code>0</code> (running),
+<code>1</code> (entering paused state), <code>2</code> (paused). The message field will be empty. This option is off by default.
+Supported in RealityServer 6.4 3508.349 or later.</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>render_progress</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">Boolean</span>
+
+
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                    
+                        <span class="optional">optional</span>
+                    
+                    
+                        
+                    
+                
+                <p>whether rendering progress events <a href="RS.Service.html#event:progress">RS.Service#event:progress</a>
+should be generated whenever an image is being rendered. The event id will be in the format <code>[render_loop_name]::render</code>.
+This option is off by default. Supported in RealityServer 6.4 3508.349 or later.</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>encoders</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                    
+                        <span class="optional">optional</span>
+                    
+                    
+                        
+                    
+                
+                <p>an object containing named stream encoder settings,
+each defining image_format, pixel_type and quality parameters. Note that all possible named encoders
+must be specified at start time. It is not possible to add new named encoders using
+<a href="RS.Stream.html#set_parameters">RS.Stream#set_parameters</a>, only modify existing settings.</p></td>
         </tr>
 	
 	
@@ -4503,7 +5380,7 @@ data is available in a render if \c wait_for_render is c true.</td>
 <dd>
     
     <div class="description">
-        <p>The result of an image render.</p>
+        <p>A single image of a render result.</p>
     </div>
     
     
@@ -4533,53 +5410,6 @@ data is available in a render if \c wait_for_render is c true.</td>
 	</thead>
 	
 	<tbody>
-	
-	
-        <tr>
-            
-                <td class="name"><code>render_loop_name</code></td>
-            
-            
-            <td class="type">
-            
-                
-<span class="param-type">String</span>
-
-
-            
-            </td>
-            
-            
-            
-            
-            
-            <td class="description last"><p>The name of the render loop this image was rendered by.</p></td>
-        </tr>
-	
-	
-	
-        <tr>
-            
-                <td class="name"><code>result</code></td>
-            
-            
-            <td class="type">
-            
-                
-<span class="param-type">Number</span>
-
-
-            
-            </td>
-            
-            
-            
-            
-            
-            <td class="description last"><p>The render result, <code>0</code> for success, <code>1</code> for converged,
-<code>-1</code> cancelled render, other negative values indicate errors.</p></td>
-        </tr>
-	
 	
 	
         <tr>
@@ -4670,6 +5500,178 @@ data is available in a render if \c wait_for_render is c true.</td>
             
             
             <td class="description last"><p>The mime type of the rendered image.</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>render_type</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">String</span>
+
+
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last"><p>The renderer defined type for the image. Typically 'result'.</p></td>
+        </tr>
+	
+	
+	</tbody>
+</table></dl>
+        
+    
+        
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+</dd>
+
+            
+                
+<dt>
+    <div class="nameContainer">
+        <h4 class="name" id="~Rendered_result">
+            <a class="share-icon" href="#~Rendered_result"><span class="glyphicon glyphicon-link"></span></a>
+            <span class="">Rendered_result</span>
+            <span class="type-signature type">Object</span>
+            
+            
+            
+            
+        </h4>
+    </div>
+    
+    
+</dt>
+<dd>
+    
+    <div class="description">
+        <p>The result of an image render.</p>
+    </div>
+    
+    
+    
+<dl class="details">
+    
+        
+        <h5 class="subsection-title">Properties:</h5>
+        
+        <dl>
+
+<table class="props">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>render_loop_name</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">String</span>
+
+
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last"><p>The name of the render loop this image was rendered by.</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>result</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">Number</span>
+
+
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last"><p>The render result, <code>0</code> for success, <code>1</code> for converged,
+<code>-1</code> cancelled render, other negative values indicate errors.</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>images</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">Array.&lt;<a href="RS.Stream.html#~Rendered_image">RS.Stream~Rendered_image</a>></span>
+
+
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last"><p>An array of images that have been rendered.</p></td>
         </tr>
 	
 	
@@ -4797,7 +5799,7 @@ and on each individual <a href="RS.Stream.html">RS.Stream</a></p>
             <td class="type">
             
                 
-<span class="param-type"><a href="RS.Stream.html#~Rendered_image">RS.Stream~Rendered_image</a></span>
+<span class="param-type"><a href="RS.Stream.html#~Rendered_result">RS.Stream~Rendered_result</a></span>
 
 
             
@@ -4807,7 +5809,7 @@ and on each individual <a href="RS.Stream.html">RS.Stream</a></p>
             
             <td class="description last">
                 
-                <p>The rendered image</p></td>
+                <p>The rendered result</p></td>
         </tr>
 	
 	
@@ -4866,7 +5868,7 @@ and on each individual <a href="RS.Stream.html">RS.Stream</a></p>
 
         <footer class="content-size">
             <div class="footer">
-                Documentation generated by <a target="_blank" href="https://github.com/jsdoc3/jsdoc">JSDoc 3.6.3</a> on Thu Jun 10 2021 09:46:32 GMT+1000 (Australian Eastern Standard Time)
+                Documentation generated by <a target="_blank" href="https://github.com/jsdoc3/jsdoc">JSDoc 3.6.10</a> on Tue Oct 03 2023 14:42:09 GMT+1100 (Australian Eastern Daylight Time)
             </div>
         </footer>
     </div>
